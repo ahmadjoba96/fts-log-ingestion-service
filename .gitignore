@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env
+# for any log files created during local testing
+*.log 
