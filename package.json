@@ -1,0 +1,24 @@
+{
+  "name": "log-service",
+  "version": "1.0.0",
+  "description": "A log ingestion and query service built with Node.js, TypeScript, and PostgreSQL — the final project for the Foothill Technology Solutions training program.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahmadjoba96/fts-log-ingestion-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ahmadjoba96/fts-log-ingestion-service/issues"
+  },
+  "homepage": "https://github.com/ahmadjoba96/fts-log-ingestion-service#readme",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
+  }
+}
