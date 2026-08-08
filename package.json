@@ -8,7 +8,10 @@
     "start": "node dist/index.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "migrate:create": "node-pg-migrate create"
   },
   "repository": {
     "type": "git",
@@ -24,10 +27,16 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
+    "@types/pg": "^8.21.0",
+    "dotenv": "^17.4.2",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
+    "node-pg-migrate": "^9.0.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.66.0"
+  },
+  "dependencies": {
+    "pg": "^8.22.0"
   }
 }
