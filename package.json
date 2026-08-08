@@ -4,6 +4,8 @@
   "description": "A log ingestion and query service built with Node.js, TypeScript, and PostgreSQL — the final project for the Foothill Technology Solutions training program.",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
