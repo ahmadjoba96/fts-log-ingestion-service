@@ -1,1 +1,1 @@
-console.log("Log service starting...");
+console.log('Log service starting...');
