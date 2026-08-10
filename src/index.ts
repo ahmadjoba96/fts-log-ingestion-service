@@ -3,6 +3,9 @@ import express from 'express';
 import { pool } from './db.js';
 import { validateLogEntry, type LogEntryInput } from './validation.js';
 import { insertLogs } from './repository.js';
+import { parseLogQueryParams } from './queryParams.js';
+import { decodeCursor, encodeCursor } from './cursor.js';
+import { queryLogs } from './repository.js';
 
 const app = express();
 const port = 8080;
@@ -37,6 +40,47 @@ app.post('/logs', async (req, res) => {
   res.status(200).json({ accepted: accepted.length, rejected });
 });
 
+app.get('/logs', async (req, res) => {
+  const result = parseLogQueryParams(req.query as Record<string, unknown>);
+
+  if (!result.valid || !result.params) {
+    return res.status(400).json({ error: result.reason });
+  }
+
+  const params = result.params;
+
+  let cursor = null;
+  if (params.cursor) {
+    cursor = decodeCursor(params.cursor);
+    if (!cursor) {
+      return res.status(400).json({ error: 'invalid or malformed cursor' });
+    }
+  }
+
+  const rows = await queryLogs(params, cursor);
+
+  // We fetch one extra row to know if there a next page
+  const hasMore = rows.length > params.limit;
+  const pageRows = hasMore ? rows.slice(0, params.limit) : rows;
+
+  const logs = pageRows.map((row) => ({
+    id: row.id,
+    timestamp: row.timestamp,
+    level: row.level,
+    service: row.service,
+    message: row.message,
+    attributes: row.attributes ?? {},
+  }));
+
+  let next_cursor: string | null = null;
+  if (hasMore) {
+    const last = pageRows[pageRows.length - 1];
+    next_cursor = encodeCursor({ timestamp: last.timestamp, id: Number(last.id) });
+  }
+
+  res.status(200).json({ logs, next_cursor });
+});
+
 app.listen(port, () => {
-    console.log(`Server is running on Port:${port}`);
+  console.log(`Server is running on Port:${port}`);
 });

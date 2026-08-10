@@ -1,5 +1,16 @@
 import { pool } from './db.js';
 import type { LogEntryInput } from './validation.js';
+import type { LogQueryParams } from './queryParams.js';
+import type { Cursor } from './cursor.js';
+
+export interface LogRow {
+  id: string;
+  timestamp: string;
+  level: string;
+  service: string;
+  message: string;
+  attributes: Record<string, unknown> | null;
+}
 
 export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
   if (entries.length === 0) return;
@@ -27,4 +38,51 @@ export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
   `;
 
   await pool.query(query, values);
+}
+
+export async function queryLogs(params: LogQueryParams, cursor: Cursor | null): Promise<LogRow[]> {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  function addCondition(sql: string, value: unknown): void {
+    values.push(value);
+    conditions.push(sql.replace('?', `$${values.length}`));
+  }
+
+  if (params.service) {
+    addCondition('service = ?', params.service);
+  }
+  if (params.level) {
+    addCondition('level = ?', params.level);
+  }
+  if (params.since) {
+    addCondition('timestamp >= ?', params.since);
+  }
+  if (params.until) {
+    addCondition('timestamp < ?', params.until);
+  }
+  if (params.q) {
+    addCondition('message ILIKE ?', `%${params.q}%`);
+  }
+  for (const [key, value] of Object.entries(params.attrs)) {
+    addCondition(`attributes ->> '${key}' = ?`, value);
+  }
+  if (cursor) {
+    values.push(cursor.timestamp, cursor.id);
+    conditions.push(`(timestamp, id) < ($${values.length - 1}, $${values.length})`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const query = `
+    SELECT id, timestamp, level, service, message, attributes
+    FROM logs
+    ${whereClause}
+    ORDER BY timestamp DESC, id DESC
+    LIMIT $${values.length + 1}
+  `;
+  values.push(params.limit + 1); // fetch one extra row
+
+  const result = await pool.query(query, values);
+  return result.rows;
 }
