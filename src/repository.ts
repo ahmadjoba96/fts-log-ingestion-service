@@ -22,7 +22,7 @@ const BUCKET_EXPR: Record<string, string> = {
   '1m': "date_trunc('minute', timestamp)",
   '1h': "date_trunc('hour', timestamp)",
   '1d': "date_trunc('day', timestamp)",
-  '5m': "to_timestamp(floor(extract(epoch from timestamp) / 300) * 300)",
+  '5m': 'to_timestamp(floor(extract(epoch from timestamp) / 300) * 300)',
 };
 
 export async function insertLogs(entries: LogEntryInput[]): Promise<void> {

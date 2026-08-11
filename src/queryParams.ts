@@ -86,9 +86,11 @@ export function parseLogQueryParams(query: Record<string, unknown>): ParamValida
   };
 }
 
-export function parseAggregateQueryParams(
-  query: Record<string, unknown>,
-): { valid: boolean; reason?: string; params?: AggregateQueryParams } {
+export function parseAggregateQueryParams(query: Record<string, unknown>): {
+  valid: boolean;
+  reason?: string;
+  params?: AggregateQueryParams;
+} {
   if (typeof query.since !== 'string' || isNaN(new Date(query.since).getTime())) {
     return { valid: false, reason: '"since" is required and must be a valid timestamp' };
   }
@@ -123,6 +125,15 @@ export function parseAggregateQueryParams(
 
   return {
     valid: true,
-    params: { service, level, attrs, q, since: query.since, until: query.until, bucket: query.bucket, groupBy },
+    params: {
+      service,
+      level,
+      attrs,
+      q,
+      since: query.since,
+      until: query.until,
+      bucket: query.bucket,
+      groupBy,
+    },
   };
 }
