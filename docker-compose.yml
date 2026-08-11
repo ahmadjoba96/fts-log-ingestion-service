@@ -23,6 +23,17 @@ services:
       - '5050:80'
     depends_on:
       - postgres
+  app:
+    build: .
+    container_name: log-service-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+    command: sh -c "npx node-pg-migrate up && node dist/index.js"
 
 volumes:
   pgdata:
