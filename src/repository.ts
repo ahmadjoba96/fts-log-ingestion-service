@@ -12,6 +12,19 @@ export interface LogRow {
   attributes: Record<string, unknown> | null;
 }
 
+export interface BucketRow {
+  start: string;
+  group: string | null;
+  count: string;
+}
+
+const BUCKET_EXPR: Record<string, string> = {
+  '1m': "date_trunc('minute', timestamp)",
+  '1h': "date_trunc('hour', timestamp)",
+  '1d': "date_trunc('day', timestamp)",
+  '5m': "to_timestamp(floor(extract(epoch from timestamp) / 300) * 300)",
+};
+
 export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
   if (entries.length === 0) return;
 
@@ -82,6 +95,45 @@ export async function queryLogs(params: LogQueryParams, cursor: Cursor | null): 
     LIMIT $${values.length + 1}
   `;
   values.push(params.limit + 1); // fetch one extra row
+
+  const result = await pool.query(query, values);
+  return result.rows;
+}
+
+export async function aggregateLogs(
+  params: { service?: string; level?: string; attrs: Record<string, string>; q?: string },
+  since: string,
+  until: string,
+  bucket: string,
+  groupBy: 'service' | 'level' | null,
+): Promise<BucketRow[]> {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  function addCondition(sql: string, value: unknown): void {
+    values.push(value);
+    conditions.push(sql.replace('?', `$${values.length}`));
+  }
+
+  addCondition('timestamp >= ?', since);
+  addCondition('timestamp < ?', until);
+  if (params.service) addCondition('service = ?', params.service);
+  if (params.level) addCondition('level = ?', params.level);
+  if (params.q) addCondition('message ILIKE ?', `%${params.q}%`);
+  for (const [key, value] of Object.entries(params.attrs)) {
+    addCondition(`attributes ->> '${key}' = ?`, value);
+  }
+
+  const bucketExpr = BUCKET_EXPR[bucket];
+  const groupExpr = groupBy ? groupBy : 'NULL';
+
+  const query = `
+    SELECT ${bucketExpr} AS start, ${groupExpr} AS "group", COUNT(*) AS count
+    FROM logs
+    WHERE ${conditions.join(' AND ')}
+    GROUP BY start, ${groupExpr}
+    ORDER BY start ASC
+  `;
 
   const result = await pool.query(query, values);
   return result.rows;
