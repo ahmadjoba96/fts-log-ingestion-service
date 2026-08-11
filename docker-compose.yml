@@ -21,6 +21,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - '5050:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - postgres
   app:
@@ -29,6 +31,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      RETENTION_DAYS: ${RETENTION_DAYS}
+      RETENTION_INTERVAL_MINUTES: ${RETENTION_INTERVAL_MINUTES}
+      RETENTION_BATCH_SIZE: ${RETENTION_BATCH_SIZE}
     ports:
       - '8080:8080'
     depends_on:
@@ -37,3 +42,4 @@ services:
 
 volumes:
   pgdata:
+  pgadmin_data:

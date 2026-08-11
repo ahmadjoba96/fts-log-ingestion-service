@@ -138,3 +138,18 @@ export async function aggregateLogs(
   const result = await pool.query(query, values);
   return result.rows;
 }
+
+export async function deleteExpiredLogs(retentionDays: number, batchSize: number): Promise<number> {
+  const result = await pool.query(
+    `
+    DELETE FROM logs
+    WHERE id IN (
+      SELECT id FROM logs
+      WHERE timestamp < NOW() - ($1 || ' days')::interval
+      LIMIT $2
+    )
+    `,
+    [retentionDays, batchSize],
+  );
+  return result.rowCount ?? 0;
+}
