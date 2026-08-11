@@ -6,6 +6,8 @@ import { insertLogs } from './repository.js';
 import { parseLogQueryParams } from './queryParams.js';
 import { decodeCursor, encodeCursor } from './cursor.js';
 import { queryLogs } from './repository.js';
+import { parseAggregateQueryParams } from './queryParams.js';
+import { aggregateLogs } from './repository.js';
 
 const app = express();
 const port = 8080;
@@ -79,6 +81,21 @@ app.get('/logs', async (req, res) => {
   }
 
   res.status(200).json({ logs, next_cursor });
+});
+
+app.get('/logs/aggregate', async (req, res) => {
+  const result = parseAggregateQueryParams(req.query as Record<string, unknown>);
+  if (!result.valid || !result.params) {
+    return res.status(400).json({ error: result.reason });
+  }
+  const p = result.params;
+  const rows = await aggregateLogs(p, p.since, p.until, p.bucket, p.groupBy);
+  const buckets = rows.map((r) => ({
+    start: r.start,
+    group: r.group,
+    count: Number(r.count),
+  }));
+  res.status(200).json({ buckets });
 });
 
 app.listen(port, () => {
