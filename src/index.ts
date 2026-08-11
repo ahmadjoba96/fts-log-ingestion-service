@@ -8,6 +8,7 @@ import { decodeCursor, encodeCursor } from './cursor.js';
 import { queryLogs } from './repository.js';
 import { parseAggregateQueryParams } from './queryParams.js';
 import { aggregateLogs } from './repository.js';
+import { startRetentionJob } from './retention.js';
 
 const app = express();
 const port = 8080;
@@ -110,3 +111,5 @@ app.get('/logs/aggregate', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on Port:${port}`);
 });
+
+startRetentionJob();
