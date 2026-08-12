@@ -11,6 +11,11 @@ services:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   pgadmin:
     image: dpage/pgadmin4
@@ -39,6 +44,11 @@ services:
     depends_on:
       - postgres
     command: sh -c "npx node-pg-migrate up && node dist/index.js"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   pgdata:
