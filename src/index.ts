@@ -13,7 +13,7 @@ import { startRetentionJob } from './retention.js';
 const app = express();
 const port = 8080;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', async (req, res) => {
   try {
@@ -106,6 +106,14 @@ app.get('/logs/aggregate', async (req, res) => {
     count: Number(r.count),
   }));
   res.status(200).json({ buckets });
+});
+
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: 'internal server error' });
 });
 
 app.listen(port, () => {
