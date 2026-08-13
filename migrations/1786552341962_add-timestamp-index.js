@@ -9,7 +9,10 @@ export const shorthands = undefined;
  * @returns {Promise<void> | void}
  */
 export const up = (pgm) => {
-  pgm.createIndex('logs', [{ name: 'timestamp', sort: 'DESC' }, { name: 'id', sort: 'DESC' }]);
+  pgm.createIndex('logs', [
+    { name: 'timestamp', sort: 'DESC' },
+    { name: 'id', sort: 'DESC' },
+  ]);
 };
 
 /**
@@ -18,5 +21,8 @@ export const up = (pgm) => {
  * @returns {Promise<void> | void}
  */
 export const down = (pgm) => {
-  pgm.dropIndex('logs', [{ name: 'timestamp', sort: 'DESC' }, { name: 'id', sort: 'DESC' }]);
+  pgm.dropIndex('logs', [
+    { name: 'timestamp', sort: 'DESC' },
+    { name: 'id', sort: 'DESC' },
+  ]);
 };
