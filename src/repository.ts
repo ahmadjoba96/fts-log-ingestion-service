@@ -1,4 +1,4 @@
-import { pool } from './db.js';
+import { writePool, readPool } from './db.js';
 import type { LogEntryInput } from './validation.js';
 import type { LogQueryParams } from './queryParams.js';
 import type { Cursor } from './cursor.js';
@@ -50,7 +50,7 @@ export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
     VALUES ${rows.join(', ')}
   `;
 
-  await pool.query(query, values);
+  await writePool.query(query, values);
 }
 
 export async function queryLogs(params: LogQueryParams, cursor: Cursor | null): Promise<LogRow[]> {
@@ -96,7 +96,7 @@ export async function queryLogs(params: LogQueryParams, cursor: Cursor | null): 
   `;
   values.push(params.limit + 1); // fetch one extra row
 
-  const result = await pool.query(query, values);
+  const result = await readPool.query(query, values);
   return result.rows;
 }
 
@@ -135,12 +135,12 @@ export async function aggregateLogs(
     ORDER BY start ASC
   `;
 
-  const result = await pool.query(query, values);
+  const result = await readPool.query(query, values);
   return result.rows;
 }
 
 export async function deleteExpiredLogs(retentionDays: number, batchSize: number): Promise<number> {
-  const result = await pool.query(
+  const result = await writePool.query(
     `
     DELETE FROM logs
     WHERE id IN (
