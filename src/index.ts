@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { pool } from './db.js';
+import { writePool, readPool } from './db.js';
 import { validateLogEntry, type LogEntryInput } from './validation.js';
 import { insertLogs } from './repository.js';
 import { parseLogQueryParams } from './queryParams.js';
@@ -17,7 +17,7 @@ app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', async (req, res) => {
   try {
-    await pool.query('SELECT 1');
+    await readPool.query('SELECT 1');
     res.status(200).send('OK');
   } catch (err) {
     res.status(503).send('Database not ready');
