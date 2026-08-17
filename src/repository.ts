@@ -125,13 +125,14 @@ export async function aggregateLogs(
   }
 
   const bucketExpr = BUCKET_EXPR[bucket];
-  const groupExpr = groupBy ? groupBy : 'NULL';
+  const groupSelectExpr = groupBy ? groupBy : 'NULL';
+  const groupByClause = groupBy ? `start, ${groupBy}` : 'start';
 
   const query = `
-    SELECT ${bucketExpr} AS start, ${groupExpr} AS "group", COUNT(*) AS count
+    SELECT ${bucketExpr} AS start, ${groupSelectExpr} AS "group", COUNT(*) AS count
     FROM logs
     WHERE ${conditions.join(' AND ')}
-    GROUP BY start, ${groupExpr}
+    GROUP BY ${groupByClause}
     ORDER BY start ASC
   `;
 
