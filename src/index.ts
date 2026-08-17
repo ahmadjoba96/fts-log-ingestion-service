@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { writePool, readPool } from './db.js';
+import { readPool } from './db.js';
 import { validateLogEntry, type LogEntryInput } from './validation.js';
 import { insertLogs } from './repository.js';
 import { parseLogQueryParams } from './queryParams.js';
@@ -20,6 +20,7 @@ app.get('/health', async (req, res) => {
     await readPool.query('SELECT 1');
     res.status(200).send('OK');
   } catch (err) {
+    console.error('Health check failed:', err);
     res.status(503).send('Database not ready');
   }
 });

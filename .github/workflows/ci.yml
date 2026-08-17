@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  contract-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose up -d --build
+
+      - name: Wait for health check
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/health; then
+              echo "Service healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Service did not become healthy in time"
+          docker compose logs
+          exit 1
+
+      - name: Smoke test endpoints
+        run: |
+          curl -sf -X POST http://localhost:8080/logs \
+            -H "Content-Type: application/json" \
+            -d '{"logs":[{"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'","level":"info","service":"ci","message":"smoke test"}]}'
+          curl -sf http://localhost:8080/logs
+          curl -sf "http://localhost:8080/logs/aggregate?since=2020-01-01T00:00:00Z&until=2030-01-01T00:00:00Z&bucket=1d"
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
