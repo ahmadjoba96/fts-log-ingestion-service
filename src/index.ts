@@ -110,6 +110,9 @@ app.get('/logs/aggregate', async (req, res) => {
 });
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof SyntaxError && 'status' in err && (err as any).status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'malformed JSON in request body' });
+  }
   console.error('Unhandled error:', err);
   if (res.headersSent) {
     return next(err);
