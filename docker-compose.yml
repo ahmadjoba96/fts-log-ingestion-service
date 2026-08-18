@@ -11,6 +11,11 @@ services:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-loguser} -d ${POSTGRES_DB:-logs}']
+      interval: 2s
+      timeout: 5s
+      retries: 10
     deploy:
       resources:
         limits:
@@ -41,7 +46,8 @@ services:
     ports:
       - '8080:8080'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     command: sh -c "npx node-pg-migrate up && node dist/index.js"
     deploy:
       resources:
@@ -51,3 +57,4 @@ services:
 
 volumes:
   pgdata:
+  

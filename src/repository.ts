@@ -2,6 +2,9 @@ import { writePool, readPool } from './db.js';
 import type { LogEntryInput } from './validation.js';
 import type { LogQueryParams } from './queryParams.js';
 import type { Cursor } from './cursor.js';
+import { from as copyFrom } from 'pg-copy-streams';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 
 export interface LogRow {
   id: string;
@@ -28,29 +31,35 @@ const BUCKET_EXPR: Record<string, string> = {
 export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
   if (entries.length === 0) return;
 
-  const columns = ['timestamp', 'level', 'service', 'message', 'attributes'];
-  const values: unknown[] = [];
-  const rows: string[] = [];
-
-  entries.forEach((entry, i) => {
-    const offset = i * columns.length;
-    const placeholders = columns.map((_, j) => `$${offset + j + 1}`);
-    rows.push(`(${placeholders.join(', ')})`);
-    values.push(
-      entry.timestamp,
-      entry.level,
-      entry.service,
-      entry.message,
-      entry.attributes ? JSON.stringify(entry.attributes) : null,
+  const client = await writePool.connect();
+  try {
+    const stream = client.query(
+      copyFrom(
+        `COPY logs (timestamp, level, service, message, attributes) FROM STDIN WITH (FORMAT csv)`,
+      ),
     );
-  });
 
-  const query = `
-    INSERT INTO logs (${columns.join(', ')})
-    VALUES ${rows.join(', ')}
-  `;
+    const rows = entries.map((entry) => {
+      const attrs = entry.attributes ? JSON.stringify(entry.attributes) : '';
+      return csvRow([entry.timestamp, entry.level, entry.service, entry.message, attrs]);
+    });
 
-  await writePool.query(query, values);
+    const source = Readable.from(rows.join(''));
+    await pipeline(source, stream);
+  } finally {
+    client.release();
+  }
+}
+
+function csvEscape(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function csvRow(values: string[]): string {
+  return values.map(csvEscape).join(',') + '\n';
 }
 
 export async function queryLogs(params: LogQueryParams, cursor: Cursor | null): Promise<LogRow[]> {
