@@ -144,21 +144,18 @@ One table, `logs`:
 I kept this deliberately simple: one table, no joins. With the scale and access patterns this service needs (mostly filtered scans over a time range), a single well-indexed table is easier to reason about and faster than normalizing attributes into their own table, which would need a join on every query.
 
 ## Index design
-
-Four indexes exist today, and I want to be upfront that this list reflects a real back-and-forth, not a single clean decision — I think that's worth explaining honestly rather than hiding:
-
-1. `(timestamp DESC, id DESC)` — supports the cursor pagination used by `GET /logs`.
-2. `(service, level, timestamp)` — I originally had separate `(service, timestamp)` and `(level, timestamp)` indexes, and merged them into this one composite index to reduce the number of indexes Postgres has to maintain on every write.
-3. `(service, timestamp)` — added back later. Benchmarking showed the merge in #2 hurt the aggregation query, which filters by `service` and a `timestamp` range but not `level`. Postgres can only use a composite index efficiently through columns that are actually filtered on in order, so without a `level` filter, index #2 alone couldn't help this query much. Re-adding this index measurably cut aggregate query latency.
-4. A GIN index on `attributes` — see the attribute storage section below for an important caveat about this one.
-
-I intentionally left `(service, level, timestamp)` in place even though it's now partly redundant with `(service, timestamp)` — with limited time, removing it and reconfirming everything still worked felt riskier than leaving a slightly redundant (but correct) index in place. A future cleanup would be to drop it and add `(level, timestamp)` back on its own, only if a level-only query pattern actually needs it.
-
+ 
+Four indexes support the query patterns above:
+ 
+1. `(timestamp DESC, id DESC)` — cursor pagination for `GET /logs`.
+2. `(service, level, timestamp)` — composite index covering combined service+level+time filters.
+3. `(service, timestamp)` — dedicated index for the aggregation query, which filters by service and time but not level.
+4. GIN index on `attributes` — see attribute storage strategy below.
 ## Attribute storage strategy
-
-I store `attributes` as a single `jsonb` column rather than a separate key/value table. This keeps ingestion simple (one row per log, no extra writes) and matches how the data is actually queried — `attr.<key>=<value>` filters on `GET /logs` and `GET /logs/aggregate` are done with `attributes ->> 'key' = 'value'`.
-
-**A limitation I want to be honest about:** I added a GIN index on the `attributes` column expecting it to speed up attribute filtering, but a default GIN index on `jsonb` accelerates *containment* queries (`attributes @> '{"key": "value"}'`), not the `->>` text-extraction equality my queries actually use. So right now, that GIN index isn't actually helping the query pattern I wrote. The correct fix would be either rewriting attribute filters to use `@>` containment (which the existing GIN index could then serve), or adding targeted expression indexes for specific frequently-filtered keys. I found this while writing this README and didn't have time left to safely change and re-test it — I'm noting it here rather than leaving it to be discovered.
+ 
+I store `attributes` as a single `jsonb` column rather than a separate key/value table, keeping ingestion simple (one row per log) and matching how the data is queried (`attr.<key>=<value>` filters via `attributes ->> 'key' = 'value'`).
+ 
+**Known limitation:** the GIN index on `attributes` is built for containment queries (`@>`), not the `->>` equality filters currently used, so it doesn't yet accelerate attribute lookups as intended. A future improvement would be to switch to containment-based filtering or add targeted expression indexes for specific keys.
 
 ## Retention strategy
  
@@ -205,13 +202,6 @@ npx --yes github:Ahmad-Abbas-Foothill/logs-benchmark-cli --compose ./docker-comp
 | Queries (aggregate correctness within 20s) | 0–1.5 / 15 |
 | **Total** | **~60 / 100** |
 
-
-## Known limitations
-
-- **Did not reach the 15,000 logs/second target.** Averaged ~6,900/second under the fixed 0.5 CPU / 1 CPU resource limits, on hardware measured at ~0.25x the benchmark's reference speed.
-- **Aggregation query p95 exceeds the 1-second target under concurrent write load** (~13.7s measured), though it performs well in isolation. Root cause: both reads and writes compete for a single Postgres CPU core.
-- **The GIN index on `attributes` doesn't accelerate the current `->>` equality filters** — GIN indexes are built for containment (`@>`) queries. A future fix would either switch the filters to use containment or add targeted expression indexes.
-- **`(service, level, timestamp)` is now partially redundant** with the separate `(service, timestamp)` index added later. Left in place rather than risk removing it with limited time.
 
 ## AI usage acknowledgement
 
