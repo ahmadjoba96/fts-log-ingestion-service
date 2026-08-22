@@ -39,20 +39,12 @@ export async function insertLogs(entries: LogEntryInput[]): Promise<void> {
       ),
     );
 
-    async function* generateRows() {
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        const attrs = entry.attributes ? JSON.stringify(entry.attributes) : '';
-        yield csvRow([entry.timestamp, entry.level, entry.service, entry.message, attrs]);
-        // yield control back to the event loop periodically so large batches
-        // don't block other concurrent requests (like the aggregate query)
-        if (i % 200 === 0) {
-          await new Promise((resolve) => setImmediate(resolve));
-        }
-      }
-    }
+    const rows = entries.map((entry) => {
+      const attrs = entry.attributes ? JSON.stringify(entry.attributes) : '';
+      return csvRow([entry.timestamp, entry.level, entry.service, entry.message, attrs]);
+    });
 
-    const source = Readable.from(generateRows());
+    const source = Readable.from(rows.join(''));
     await pipeline(source, stream);
   } finally {
     client.release();
