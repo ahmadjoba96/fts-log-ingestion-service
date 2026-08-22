@@ -177,29 +177,25 @@ npx --yes github:Ahmad-Abbas-Foothill/logs-benchmark-cli --compose ./docker-comp
 ```
 
 ## Measured performance results
-
-**Test environment:** Windows 11, WSL2, Docker Desktop, 10 CPUs / 6GB RAM allocated to Docker. The benchmark tool measured my machine at roughly **0.25x** the speed of its reference hardware — about 4x slower — so these numbers should be read with that in mind; the same code on faster hardware would likely score higher. The application and database themselves are capped at 0.5 CPU/256MB and 1 CPU/1GB regardless of host machine, per the project's fixed resource limits.
-
-**Dataset size:** 1,000,000 rows seeded before each test.
-**Batch size:** 100 logs per ingestion request.
-**Ingestion rate:** scenarios target 9,750–30,000 logs/second; I sustained roughly **6,900 logs/second on average** (best single run: 7,657/second) — short of the 15,000/second target.
-**Query rate:** 4 aggregation requests/second, sustained throughout ingestion.
-
-**Query latency percentiles (average across 4 runs):**
-| Metric | Result |
+ 
+**Test environment:** Windows 11, WSL2, Docker Desktop, 10 CPUs / 6GB RAM allocated to Docker. Machine measured at ~0.25x the benchmark's reference hardware speed. App and database capped at 0.5 CPU/256MB and 1 CPU/1GB regardless of host machine.
+ 
+| | |
 |---|---|
+| Dataset size | 1,000,000 rows seeded before each test |
+| Batch size | 100 logs per request |
+| Ingestion rate | ~6,900 logs/sec average (best run: 7,657/sec); target was 15,000/sec |
+| Query rate | 4 aggregation requests/sec, sustained during ingestion |
 | Ingestion p95 | ~3.7 seconds |
 | Aggregation query p95 | ~13.7 seconds (target: under 1 second) |
-
-**Resource usage:** capped at 0.5 CPU/256MB (app) and 1 CPU/1GB (database) for every run, per the project's fixed limits.
-
-**Overall benchmark score (average of 4 runs, range 59.9–60.8):**
+ 
+**Benchmark score (average of 4 runs, range 59.9–60.8):**
 | Category | Result |
 |---|---|
-| Correctness | 15 / 15, every run |
-| Reliability | 20 / 20, every run — no dropped requests, no crashes |
+| Correctness | 15 / 15 |
+| Reliability | 20 / 20 |
 | Performance | ~24 / 50 |
-| Queries (aggregate correctness within 20s) | 0–1.5 / 15 |
+| Queries | 0–1.5 / 15 |
 | **Total** | **~60 / 100** |
 
 
